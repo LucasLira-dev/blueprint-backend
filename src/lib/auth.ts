@@ -6,7 +6,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import 'dotenv/config';
 
-type Role = 'admin' | 'user'
+type Role = 'admin' | 'user';
 
 // Configurar pool de conexões para Neon
 const connectionString = process.env.DATABASE_URL;

@@ -13,10 +13,23 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum Status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id            String    @id
   name          String
   email         String
+  studyPlans StudyPlan[]
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
@@ -79,4 +92,45 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model StudyPlan {
+  id String @id
+  topic String
+  syllabus String @db.Text
+  visibility Visibility @default(PRIVATE)
+  status Status @default(PENDING)
+  pdfUrl String?
+  threadId String?
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos VideoResource[]
+  books BookResource[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VideoResource {
+  id String @id
+  studyPlanId String
+  title String
+  videoUrl String
+  thumbnail String?
+  channelName String?
+  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BookResource {
+  id String @id
+  studyPlanId String
+  title String
+  authors String[]
+  description String?
+  infoLink String?
+  thumbnail String?
+  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

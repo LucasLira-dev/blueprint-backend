@@ -35,6 +35,7 @@
     "@types/pdfkit": "^0.17.6",
     "axios": "^1.18.1",
     "better-auth": "^1.6.24",
+    "cloudinary": "^2.10.0",
     "pdfkit": "^0.19.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

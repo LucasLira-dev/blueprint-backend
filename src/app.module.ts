@@ -7,9 +7,16 @@ import { YoutubeService } from './youtube/youtube.service';
 import { YoutubeModule } from './youtube/youtube.module';
 import { BooksModule } from './books/books.module';
 import { HttpModule } from '@nestjs/axios';
+import { PdfModule } from './pdf/pdf.module';
 
 @Module({
-  imports: [AuthModule.forRoot({ auth }), YoutubeModule, BooksModule, HttpModule],
+  imports: [
+    AuthModule.forRoot({ auth }),
+    YoutubeModule,
+    BooksModule,
+    HttpModule,
+    PdfModule,
+  ],
   controllers: [AppController],
   providers: [AppService, YoutubeService],
 })

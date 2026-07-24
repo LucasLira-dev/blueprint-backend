@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import {
-  v2 as cloudinary,
-} from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import { VideoResult } from 'src/youtube/youtube.service';
 import { BookResult } from 'src/books/books.service';
 
@@ -15,13 +13,13 @@ cloudinary.config({
 @Injectable()
 export class PdfService {
   async generate(
-      topic: string,
-      syllabus: string,
-      videos: VideoResult[],
-      books: BookResult[],
+    topic: string,
+    syllabus: string,
+    videos: VideoResult[],
+    books: BookResult[],
   ): Promise<string> {
-      const buffer = await this.buildPdfBuffer(topic, syllabus, videos, books);
-      return this.uploadToCloudinary(buffer, topic);
+    const buffer = await this.buildPdfBuffer(topic, syllabus, videos, books);
+    return this.uploadToCloudinary(buffer, topic);
   }
 
   private buildPdfBuffer(
@@ -34,9 +32,9 @@ export class PdfService {
       const doc = new PDFDocument({ margin: 50 });
       const chunks: Buffer[] = [];
 
-      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+      doc.on('error', (err) => reject(new Error(String(err))));
 
       doc.fontSize(22).text(`Plano de Estudos: ${topic}`);
       doc.moveDown();
@@ -92,7 +90,10 @@ export class PdfService {
           format: 'pdf',
         },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            reject(new Error(error.message));
+            return;
+          }
           resolve(result!.secure_url);
         },
       );

@@ -1,26 +1,43 @@
 import { Injectable } from '@nestjs/common';
-import { CreateStudyPlanDto } from './dto/create-study-plan.dto';
-import { UpdateStudyPlanDto } from './dto/update-study-plan.dto';
+import { StudyPlanStateType } from 'src/agent/state/study-plan.state';
+import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class StudyPlansService {
-  create(createStudyPlanDto: CreateStudyPlanDto) {
-    return 'This action adds a new studyPlan';
-  }
+  constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return `This action returns all studyPlans`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} studyPlan`;
-  }
-
-  update(id: number, updateStudyPlanDto: UpdateStudyPlanDto) {
-    return `This action updates a #${id} studyPlan`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} studyPlan`;
+  async persistFinalState(
+    userId: string,
+    state: StudyPlanStateType,
+    threadId: string,
+  ) {
+    return this.prisma.studyPlan.create({
+      data: {
+        userId,
+        topic: state.topic,
+        syllabus: state.syllabus,
+        pdfUrl: state.pdfUrl,
+        status: 'COMPLETED',
+        threadId,
+        videos: {
+          create: state.videos.map((video) => ({
+            title: video.title ?? '',
+            videoUrl: video.videoUrl ?? '',
+            thumbnail: video.thumbnail,
+            channelName: video.channelName,
+          })),
+        },
+        books: {
+          create: state.books.map((book) => ({
+            title: book.title ?? '',
+            authors: book.authors ?? [],
+            description: book.description,
+            infoLink: book.infoLink,
+            thumbnail: book.thumbnail,
+          })),
+        },
+      },
+      include: { books: true, videos: true },
+    });
   }
 }

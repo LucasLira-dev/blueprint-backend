@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AgentService } from './agent.service';
-import { PdfService } from 'src/pdf/pdf.service';
-import { BooksService } from 'src/books/books.service';
-import { YoutubeService } from 'src/youtube/youtube.service';
+import { YoutubeModule } from 'src/youtube/youtube.module';
+import { BooksModule } from 'src/books/books.module';
+import { PdfModule } from 'src/pdf/pdf.module';
 
 @Module({
-  imports: [YoutubeService, BooksService, PdfService],
+  imports: [YoutubeModule, BooksModule, PdfModule],
   providers: [AgentService],
   exports: [AgentService],
 })

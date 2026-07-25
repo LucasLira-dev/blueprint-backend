@@ -95,7 +95,7 @@ model Verification {
 }
 
 model StudyPlan {
-  id String @id
+  id String @id @default(uuid())
   topic String
   syllabus String @db.Text
   visibility Visibility @default(PRIVATE)
@@ -111,7 +111,7 @@ model StudyPlan {
 }
 
 model VideoResource {
-  id String @id
+  id String @id @default(uuid())
   studyPlanId String
   title String
   videoUrl String
@@ -123,7 +123,7 @@ model VideoResource {
 }
 
 model BookResource {
-  id String @id
+  id String @id @default(uuid())
   studyPlanId String
   title String
   authors String[]

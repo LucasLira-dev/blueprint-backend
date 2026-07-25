@@ -1,17 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { v2 as cloudinary } from 'cloudinary';
 import { VideoResult } from 'src/youtube/youtube.service';
 import { BookResult } from 'src/books/books.service';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 @Injectable()
-export class PdfService {
+export class PdfService implements OnModuleInit {
   async generate(
     topic: string,
     syllabus: string,
@@ -20,6 +14,14 @@ export class PdfService {
   ): Promise<string> {
     const buffer = await this.buildPdfBuffer(topic, syllabus, videos, books);
     return this.uploadToCloudinary(buffer, topic);
+  }
+
+  onModuleInit() {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
   }
 
   private buildPdfBuffer(

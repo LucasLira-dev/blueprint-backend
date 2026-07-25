@@ -2,7 +2,7 @@ import { Annotation } from '@langchain/langgraph';
 import { VideoResult } from 'src/youtube/youtube.service';
 import { BookResult } from 'src/books/books.service';
 
-export const studyPlanState = Annotation.Root({
+export const StudyPlanState = Annotation.Root({
   topic: Annotation<string>,
   userId: Annotation<string>,
   videos: Annotation<VideoResult[]>({
@@ -27,4 +27,4 @@ export const studyPlanState = Annotation.Root({
   }),
 });
 
-export type StudyPlanStateType = typeof studyPlanState.State;
+export type StudyPlanStateType = typeof StudyPlanState.State;

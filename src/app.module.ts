@@ -8,6 +8,8 @@ import { YoutubeModule } from './youtube/youtube.module';
 import { BooksModule } from './books/books.module';
 import { HttpModule } from '@nestjs/axios';
 import { PdfModule } from './pdf/pdf.module';
+import { AgentModule } from './agent/agent.module';
+import { StudyPlansModule } from './study-plans/study-plans.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PdfModule } from './pdf/pdf.module';
     BooksModule,
     HttpModule,
     PdfModule,
+    AgentModule,
+    StudyPlansModule,
   ],
   controllers: [AppController],
   providers: [AppService, YoutubeService],

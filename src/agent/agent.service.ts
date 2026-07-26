@@ -9,6 +9,8 @@ import { buildGeneratePdfNode } from './nodes/generate-pdf.node';
 import { buildFetchBooksNode } from './nodes/fetch-books.node';
 import { buildFetchVideosNode } from './nodes/fetch-videos.node';
 import { buildGenerateStudyPlanNode } from './nodes/generate-study-plan.node';
+import { buildExtractSearchQueryNode } from './nodes/extract-search-query.node';
+import { buildModerateTopicNode } from './nodes/moderate-topic.node';
 
 @Injectable()
 export class AgentService implements OnModuleInit {
@@ -33,13 +35,22 @@ export class AgentService implements OnModuleInit {
 
   private compileGraph() {
     const graph = new StateGraph(StudyPlanState)
+      .addNode('extractSearchQuery', buildExtractSearchQueryNode())
       .addNode('fetchVideos', buildFetchVideosNode(this.youtubeService))
       .addNode('fetchBooks', buildFetchBooksNode(this.booksService))
       .addNode('generateStudyPlan', buildGenerateStudyPlanNode())
-      .addNode('generatePdf', buildGeneratePdfNode(this.pdfService));
+      .addNode('generatePdf', buildGeneratePdfNode(this.pdfService))
+      .addNode('moderateTopic', buildModerateTopicNode());
 
-    graph.addEdge(START, 'fetchVideos');
-    graph.addEdge(START, 'fetchBooks');
+    graph.addEdge(START, 'moderateTopic');
+    graph.addConditionalEdges(
+      'moderateTopic',
+      (state: StudyPlanStateType) =>
+        state.isAllowed ? 'extractSearchQuery' : END,
+      ['extractSearchQuery', END],
+    );
+    graph.addEdge('extractSearchQuery', 'fetchVideos');
+    graph.addEdge('extractSearchQuery', 'fetchBooks');
     graph.addEdge('fetchVideos', 'generateStudyPlan');
     graph.addEdge('fetchBooks', 'generateStudyPlan');
     graph.addEdge('generateStudyPlan', 'generatePdf');

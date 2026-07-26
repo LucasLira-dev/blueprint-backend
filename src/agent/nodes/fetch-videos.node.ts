@@ -10,7 +10,7 @@ export function buildFetchVideosNode(youtubeService: YoutubeService) {
       label: 'Buscando os 10 melhores videos sobre o tema...',
     });
 
-    const videos = await youtubeService.search(state.topic, 10);
+    const videos = await youtubeService.search(state.searchQuery, 10);
 
     config.writer?.({
       step: 'fetchVideos',

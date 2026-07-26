@@ -35,6 +35,12 @@ export class StudyPlansController {
       }
 
       const finalState = await this.agentService.getFinalState(threadId);
+
+      if (!finalState.isAllowed) {
+        res.end();
+        return;
+      }
+
       const saved = await this.studyPlansService.persistFinalState(
         userId,
         finalState,

@@ -4,6 +4,14 @@ import { BookResult } from 'src/books/books.service';
 
 export const StudyPlanState = Annotation.Root({
   topic: Annotation<string>,
+  searchQuery: Annotation<string>({
+    reducer: (_prev, next) => next,
+    default: () => '',
+  }),
+  isAllowed: Annotation<boolean>({
+    reducer: (_prev, next) => next,
+    default: () => false,
+  }),
   userId: Annotation<string>,
   videos: Annotation<VideoResult[]>({
     reducer: (_prev, next) => next,

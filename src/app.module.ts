@@ -10,10 +10,18 @@ import { HttpModule } from '@nestjs/axios';
 import { PdfModule } from './pdf/pdf.module';
 import { AgentModule } from './agent/agent.module';
 import { StudyPlansModule } from './study-plans/study-plans.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
     AuthModule.forRoot({ auth }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 30,
+      },
+    ]),
     YoutubeModule,
     BooksModule,
     HttpModule,

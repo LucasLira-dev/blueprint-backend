@@ -1,9 +1,11 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import { StudyPlansService } from './study-plans.service';
 import { AgentService } from 'src/agent/agent.service';
 import { type UserSession, Session } from '@thallesp/nestjs-better-auth';
 import { type Response } from 'express';
 import { randomUUID } from 'crypto';
+import { BetterAuthThrottlerGuard } from 'src/common/guards/user-throttler.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('study-plans')
 export class StudyPlansController {
@@ -12,6 +14,8 @@ export class StudyPlansController {
     private readonly agentService: AgentService,
   ) {}
 
+  @UseGuards(BetterAuthThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
   @Get('generate')
   async generate(
     @Query('topic') topic: string,

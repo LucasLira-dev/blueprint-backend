@@ -3,7 +3,7 @@ import { StudyPlanStateType } from '../state/study-plan.state';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GOOGLE_GENAI_MODEL ?? 'gemini-2.5-flash',
+  model: process.env.GOOGLE_GENAI_MODEL ?? 'gemini-2.5-flash-lite',
   apiKey: process.env.GOOGLE_API_KEY ?? '',
   temperature: 0,
 });

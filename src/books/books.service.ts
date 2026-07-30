@@ -46,7 +46,11 @@ export class BooksService {
         authors: item?.volumeInfo?.authors ?? undefined,
         description: item?.volumeInfo?.description ?? undefined,
         infoLink: item?.volumeInfo?.infoLink ?? undefined,
-        thumbnail: item?.volumeInfo?.imageLinks?.thumbnail ?? undefined,
+        thumbnail:
+          item?.volumeInfo?.imageLinks?.thumbnail?.replace(
+            'zoom=1',
+            'zoom=0',
+          ) ?? undefined,
       }));
     } catch (error) {
       this.logger.error(

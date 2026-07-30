@@ -38,7 +38,13 @@ export class YoutubeService {
       return (data.items ?? []).map((item: youtube_v3.Schema$SearchResult) => ({
         title: item?.snippet?.title,
         videoUrl: `https://www.youtube.com/watch?v=${item?.id?.videoId}`,
-        thumbnail: item?.snippet?.thumbnails?.default?.url ?? undefined,
+        thumbnail:
+          item?.snippet?.thumbnails?.maxres?.url ??
+          item?.snippet?.thumbnails?.standard?.url ??
+          item?.snippet?.thumbnails?.high?.url ??
+          item?.snippet?.thumbnails?.medium?.url ??
+          item?.snippet?.thumbnails?.default?.url ??
+          undefined,
         channelName: item?.snippet?.channelTitle ?? undefined,
       }));
     } catch (error) {

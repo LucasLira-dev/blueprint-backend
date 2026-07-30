@@ -1,11 +1,15 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
-import { v2 as cloudinary } from 'cloudinary';
 import { VideoResult } from 'src/youtube/youtube.service';
 import { BookResult } from 'src/books/books.service';
+import { SupabaseStorageService } from 'src/storage/supabase-storage.service';
 
 @Injectable()
-export class PdfService implements OnModuleInit {
+export class PdfService {
+  constructor(
+    private readonly supabaseStorageService: SupabaseStorageService,
+  ) {}
+
   async generate(
     topic: string,
     syllabus: string,
@@ -13,15 +17,8 @@ export class PdfService implements OnModuleInit {
     books: BookResult[],
   ): Promise<string> {
     const buffer = await this.buildPdfBuffer(topic, syllabus, videos, books);
-    return this.uploadToCloudinary(buffer, topic);
-  }
-
-  onModuleInit() {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
+    const fileName = `plano-${topic.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
+    return this.supabaseStorageService.uploadPdf(buffer, fileName);
   }
 
   private buildPdfBuffer(
@@ -79,27 +76,6 @@ export class PdfService implements OnModuleInit {
       });
 
       doc.end();
-    });
-  }
-
-  private uploadToCloudinary(buffer: Buffer, topic: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'raw',
-          folder: 'study-plans',
-          public_id: `plano-${topic.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`,
-          format: 'pdf',
-        },
-        (error, result) => {
-          if (error) {
-            reject(new Error(error.message));
-            return;
-          }
-          resolve(result!.secure_url);
-        },
-      );
-      uploadStream.end(buffer);
     });
   }
 }

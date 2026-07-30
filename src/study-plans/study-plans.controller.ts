@@ -1,4 +1,13 @@
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseEnumPipe,
+  Patch,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { StudyPlansService } from './study-plans.service';
 import { AgentService } from 'src/agent/agent.service';
 import { type UserSession, Session } from '@thallesp/nestjs-better-auth';
@@ -6,6 +15,7 @@ import { type Response } from 'express';
 import { randomUUID } from 'crypto';
 import { BetterAuthThrottlerGuard } from 'src/common/guards/user-throttler.guard';
 import { Throttle } from '@nestjs/throttler';
+import { Visibility } from 'src/generated/prisma/enums';
 
 @Controller('study-plans')
 export class StudyPlansController {
@@ -66,5 +76,28 @@ export class StudyPlansController {
     } finally {
       res.end();
     }
+  }
+
+  @Get('plans')
+  async getPlans(@Session() session: UserSession) {
+    return this.studyPlansService.getPlans(session.user.id);
+  }
+
+  @Get('plans/:id')
+  async getPlanById(@Param('id') id: string, @Session() session: UserSession) {
+    return this.studyPlansService.getPlanById(id, session.user.id);
+  }
+
+  @Patch('plans/:id/visibility')
+  async changeVisibility(
+    @Param('id') id: string,
+    @Query('visibility', new ParseEnumPipe(Visibility)) visibility: Visibility,
+    @Session() session: UserSession,
+  ) {
+    return this.studyPlansService.changeVisibility(
+      id,
+      visibility,
+      session.user.id,
+    );
   }
 }

@@ -70,9 +70,9 @@ export const auth = betterAuth({
               await supabase.storage.from('study-plans').remove([filePath]);
             }
           }
-        }
-      }
-    }
+        },
+      },
+    },
   },
   user: {
     deleteUser: {

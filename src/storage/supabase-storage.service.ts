@@ -49,7 +49,9 @@ export class SupabaseStorageService implements OnModuleInit {
     const bucketIndex = pathParts.indexOf(this.bucketName);
     const filePath = pathParts.slice(bucketIndex + 1).join('/');
 
-    const { error } = await this.supabase.storage.from(this.bucketName).remove([filePath]);
+    const { error } = await this.supabase.storage
+      .from(this.bucketName)
+      .remove([filePath]);
 
     if (error) {
       console.error(`Error deleting PDF: ${error.message}`);

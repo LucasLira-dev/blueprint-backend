@@ -17,7 +17,7 @@ function buildPrompt(state: StudyPlanStateType): string {
     .join('\n');
 
   return `Você é um planejador de estudos. Crie um cronograma de estudos claro e estruturado
-    sobre o tema "${state.topic}", organizado em módulos/semanas progressivas (do básico ao avançado).
+    sobre o tema "${state.topic}", o usuário deseja ${state.search.intent} ${state.search.subject}, nível ${state.search.level || 'não especificado'}, organizado em módulos/semanas progressivas (do básico ao avançado).
     Use os recursos abaixo como referência de conteúdo disponível, mas escreva o cronograma
     como texto corrido em português, sem inventar links:
     Vídeos disponíveis:

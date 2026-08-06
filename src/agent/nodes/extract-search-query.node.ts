@@ -1,10 +1,11 @@
 import { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { StudyPlanStateType } from '../state/study-plan.state';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { ChatGroq } from '@langchain/groq';
+import { SearchQuerySchema } from '../searchQuerySchema';
 
-const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GOOGLE_GENAI_MODEL ?? 'gemini-2.5-flash',
-  apiKey: process.env.GOOGLE_API_KEY ?? '',
+const llm = new ChatGroq({
+  model: 'openai/gpt-oss-20b',
+  apiKey: process.env.GROQ_API_KEY ?? '',
   temperature: 0,
 });
 
@@ -16,20 +17,14 @@ export function buildExtractSearchQueryNode() {
       label: 'Extraindo a query de pesquisa...',
     });
 
-    const prompt = `Extraia APENAS o termo de busca principal (2 a 5 palavras, sem frases) do pedido
-        abaixo, ideal para pesquisar vídeos e livros sobre o assunto. Responda só com o termo,
-        sem aspas, sem explicação.
+    const extractor = llm.withStructuredOutput(SearchQuerySchema, {});
 
-        Pedido: "${state.topic}"`;
+    const result = await extractor.invoke(`
+Extraia as informações relevantes do pedido.
 
-    const response = await llm.invoke(prompt);
-
-    const searchQuery =
-      typeof response.content === 'string'
-        ? response.content
-        : response.content
-            .map((c) => (typeof c === 'string' ? c : c.text))
-            .join('');
+Pedido:
+"${state.topic}"
+`);
 
     config.writer?.({
       step: 'extractSearchQuery',
@@ -37,6 +32,6 @@ export function buildExtractSearchQueryNode() {
       label: 'Query de pesquisa extraída com sucesso.',
     });
 
-    return { searchQuery };
+    return { search: result };
   };
 }

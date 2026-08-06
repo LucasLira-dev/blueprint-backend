@@ -120,14 +120,11 @@ export class StudyPlansService {
 
   async getMyFavoritePlans(userId: string) {
     const favoritePlans = await this.prisma.favoriteStudyPlan.findMany({
-      where: { 
+      where: {
         userId,
         studyPlan: {
-          OR: [
-            { visibility: 'PUBLIC' },
-            { userId: userId },
-          ]
-        }
+          OR: [{ visibility: 'PUBLIC' }, { userId: userId }],
+        },
       },
       select: {
         studyPlan: {
@@ -192,9 +189,7 @@ export class StudyPlansService {
     });
 
     if (!plan) {
-      throw new BadRequestException(
-        'Plano de estudo não encontrado.',
-      );
+      throw new BadRequestException('Plano de estudo não encontrado.');
     }
 
     if (plan.visibility === 'PRIVATE' && plan.userId !== userId) {
@@ -262,7 +257,7 @@ export class StudyPlansService {
           userId,
           studyPlanId: planId,
         },
-      }); 
+      });
     }
   }
 

@@ -10,7 +10,7 @@ export function buildFetchBooksNode(booksService: BooksService) {
       label: 'Buscando os 10 melhores livros sobre o tema...',
     });
 
-    const books = await booksService.searchBooks(state.searchQuery, 10);
+    const books = await booksService.searchBooks(state.search.subject, 10);
 
     config.writer?.({
       step: 'fetchBooks',

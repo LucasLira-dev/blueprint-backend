@@ -6,6 +6,7 @@ import { youtube_v3 } from '@googleapis/youtube';
 export interface VideoResult {
   title: string | undefined | null;
   videoUrl: string | undefined;
+  videoId: string | undefined;
   thumbnail: string | undefined;
   channelName: string | undefined;
 }
@@ -38,6 +39,7 @@ export class YoutubeService {
       return (data.items ?? []).map((item: youtube_v3.Schema$SearchResult) => ({
         title: item?.snippet?.title,
         videoUrl: `https://www.youtube.com/watch?v=${item?.id?.videoId}`,
+        videoId: item.id?.videoId ?? undefined,
         thumbnail:
           item?.snippet?.thumbnails?.maxres?.url ??
           item?.snippet?.thumbnails?.standard?.url ??

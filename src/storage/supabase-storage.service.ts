@@ -42,4 +42,17 @@ export class SupabaseStorageService implements OnModuleInit {
 
     return urlData.publicUrl;
   }
+
+  async deletePdf(publicUrl: string): Promise<void> {
+    const url = new URL(publicUrl);
+    const pathParts = url.pathname.split('/');
+    const bucketIndex = pathParts.indexOf(this.bucketName);
+    const filePath = pathParts.slice(bucketIndex + 1).join('/');
+
+    const { error } = await this.supabase.storage.from(this.bucketName).remove([filePath]);
+
+    if (error) {
+      console.error(`Error deleting PDF: ${error.message}`);
+    }
+  }
 }

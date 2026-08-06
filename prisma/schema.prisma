@@ -30,6 +30,7 @@ model User {
   name          String
   email         String
   studyPlans StudyPlan[]
+  favoritesStudyPlans FavoriteStudyPlan[]
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
@@ -106,8 +107,12 @@ model StudyPlan {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   videos VideoResource[]
   books BookResource[]
+  favorites FavoriteStudyPlan[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([visibility])
 }
 
 model VideoResource {
@@ -115,11 +120,14 @@ model VideoResource {
   studyPlanId String
   title String
   videoUrl String
+  videoId String
   thumbnail String?
   channelName String?
   studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([studyPlanId])
 }
 
 model BookResource {
@@ -133,4 +141,20 @@ model BookResource {
   studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([studyPlanId])
+}
+
+model FavoriteStudyPlan {
+  id String @id @default(uuid())
+  userId String
+  studyPlanId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, studyPlanId])
+  @@index([userId])
+  @@index([studyPlanId])
 }

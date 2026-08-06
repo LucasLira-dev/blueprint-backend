@@ -17,7 +17,12 @@ export class PdfService {
     books: BookResult[],
   ): Promise<string> {
     const buffer = await this.buildPdfBuffer(topic, syllabus, videos, books);
-    const fileName = `plano-${topic.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
+    const fileName = `plano-${topic
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .toLowerCase()}-${Date.now()}.pdf`;
     return this.supabaseStorageService.uploadPdf(buffer, fileName);
   }
 

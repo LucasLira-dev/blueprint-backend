@@ -43,6 +43,42 @@ export const auth = betterAuth({
       input: false,
     },
   },
+  databaseHooks: {
+    user: {
+      delete: {
+        before: async ({ data }) => {
+          const { id: userId } = data as { id: string };
+
+          const plans = await prisma.studyPlan.findMany({
+            where: { userId },
+            select: { pdfUrl: true },
+          });
+
+          for (const plan of plans) {
+            if (plan.pdfUrl) {
+              const url = new URL(plan.pdfUrl);
+              const pathParts = url.pathname.split('/');
+              const bucketIndex = pathParts.indexOf('study-plans');
+              const filePath = pathParts.slice(bucketIndex + 1).join('/');
+
+              const { createClient } = await import('@supabase/supabase-js');
+              const supabase = createClient(
+                process.env.SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!,
+              );
+
+              await supabase.storage.from('study-plans').remove([filePath]);
+            }
+          }
+        }
+      }
+    }
+  },
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
   trustedOrigins: [frontendUrl],
   advanced: {
     defaultCookieAttributes: {

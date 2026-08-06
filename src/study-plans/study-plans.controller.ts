@@ -1,7 +1,10 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   Param,
+  ParseBoolPipe,
   ParseEnumPipe,
   Patch,
   Query,
@@ -83,6 +86,16 @@ export class StudyPlansController {
     return this.studyPlansService.getPlans(session.user.id);
   }
 
+  @Get('plans/my-favorites')
+  async getMyFavoritePlans(@Session() session: UserSession) {
+    return this.studyPlansService.getMyFavoritePlans(session.user.id);
+  }
+
+  @Get('plans/publics')
+  async getPublicPlans(@Session() session: UserSession) {
+    return this.studyPlansService.getPublicPlans(session.user.id);
+  }
+
   @Get('plans/:id')
   async getPlanById(@Param('id') id: string, @Session() session: UserSession) {
     return this.studyPlansService.getPlanById(id, session.user.id);
@@ -99,5 +112,37 @@ export class StudyPlansController {
       visibility,
       session.user.id,
     );
+  }
+
+  @Patch('plans/:id/favorite')
+  async changeFavorite(
+    @Param('id') id: string,
+    @Body('favorite', ParseBoolPipe) favorite: boolean,
+    @Session() session: UserSession,
+  ) {
+    return this.studyPlansService.changeFavorite(id, favorite, session.user.id);
+  }
+
+  @Delete('plans/:id/removeFavorite')
+  async removeFavorite(
+    @Param('id') id: string,
+    @Session() session: UserSession,
+  ) {
+    return this.studyPlansService.deleteFavorite(id, session.user.id);
+  }
+
+  @Delete('plans/deleteAllFavorites')
+  async deleteAllFavorites(@Session() session: UserSession) {
+    return this.studyPlansService.deleteAllFavoritesByUser(session.user.id);
+  }
+
+  @Delete('plans/delete-all')
+  async deleteAllPlans(@Session() session: UserSession) {
+    return this.studyPlansService.deleteAllPlansByUser(session.user.id);
+  }
+
+  @Delete('plans/:id')
+  async deletePlan(@Param('id') id: string, @Session() session: UserSession) {
+    return this.studyPlansService.deletePlan(id, session.user.id);
   }
 }

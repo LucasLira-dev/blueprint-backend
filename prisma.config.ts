@@ -5,10 +5,7 @@ import { defineConfig } from 'prisma/config';
 
 const databaseUrl = process.env.DATABASE_URL;
 const directUrl = process.env.DIRECT_URL ?? process.env.DIRECT_DATABASE_URL ?? databaseUrl;
-
-if (!databaseUrl && !directUrl) {
-  throw new Error('Missing DATABASE_URL or DIRECT_URL environment variable for Prisma');
-}
+const fallbackUrl = 'postgresql://localhost:5432/postgres';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -16,8 +13,8 @@ export default defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    // Use DIRECT_URL when available for migrations, but fallback to DATABASE_URL
-    // so build-time generation works in Docker/Render without a direct connection URL.
-    url: directUrl ?? databaseUrl,
+    // Use the real connection URL when present, but keep a harmless fallback so
+    // Prisma CLI commands can load during Docker builds without runtime env vars.
+    url: directUrl ?? databaseUrl ?? fallbackUrl,
   },
 });

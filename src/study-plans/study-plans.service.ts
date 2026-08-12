@@ -4,12 +4,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { StudyPlanStateType } from 'src/agent/state/study-plan.state';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from '../../prisma.service';
 import { Visibility } from 'src/generated/prisma/enums';
+import { SupabaseStorageService } from 'src/storage/supabase-storage.service';
 
 @Injectable()
 export class StudyPlansService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private supabaseStorageService: SupabaseStorageService,
+  ) {}
 
   async persistFinalState(
     userId: string,
@@ -320,6 +324,8 @@ export class StudyPlansService {
       where: { id: planId },
     });
 
+    await this.supabaseStorageService.deletePdf(plan.pdfUrl);
+
     return { message: 'Plano de estudo deletado com sucesso.' };
   }
 
@@ -337,6 +343,10 @@ export class StudyPlansService {
     await this.prisma.studyPlan.deleteMany({
       where: { userId },
     });
+
+    for (const plan of plans) {
+      await this.supabaseStorageService.deletePdf(plan.pdfUrl);
+    }
 
     return {
       message:

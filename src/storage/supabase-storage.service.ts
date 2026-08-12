@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 export class SupabaseStorageService implements OnModuleInit {
   private readonly logger = new Logger(SupabaseStorageService.name);
 
-  private supabase: ReturnType<typeof createClient>;
+  private supabase!: ReturnType<typeof createClient>;
   private readonly bucketName = 'study-plans';
 
   onModuleInit() {
@@ -43,7 +43,11 @@ export class SupabaseStorageService implements OnModuleInit {
     return urlData.publicUrl;
   }
 
-  async deletePdf(publicUrl: string): Promise<void> {
+  async deletePdf(publicUrl: string | null): Promise<void> {
+    if (!publicUrl) {
+      return;
+    }
+
     const url = new URL(publicUrl);
     const pathParts = url.pathname.split('/');
     const bucketIndex = pathParts.indexOf(this.bucketName);

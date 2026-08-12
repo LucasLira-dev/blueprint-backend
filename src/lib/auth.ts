@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin } from 'better-auth/plugins';
 import { PrismaClient } from '../generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 type Role = 'admin' | 'user';
 
@@ -22,9 +23,7 @@ if (!process.env.FRONTEND_URL) {
 const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
 const isHttpsFrontend = frontendUrl.startsWith('https://');
 
-const pool = new Pool({ connectionString });
-
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 export const auth = betterAuth({
@@ -46,29 +45,60 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       delete: {
-        before: async ({ data }) => {
-          const { id: userId } = data as { id: string };
-
-          const plans = await prisma.studyPlan.findMany({
-            where: { userId },
-            select: { pdfUrl: true },
-          });
-
-          for (const plan of plans) {
-            if (plan.pdfUrl) {
-              const url = new URL(plan.pdfUrl);
-              const pathParts = url.pathname.split('/');
-              const bucketIndex = pathParts.indexOf('study-plans');
-              const filePath = pathParts.slice(bucketIndex + 1).join('/');
-
-              const { createClient } = await import('@supabase/supabase-js');
-              const supabase = createClient(
-                process.env.SUPABASE_URL!,
-                process.env.SUPABASE_SERVICE_ROLE_KEY!,
-              );
-
-              await supabase.storage.from('study-plans').remove([filePath]);
+        after: async ({ data }) => {
+          try {
+            if (!data) {
+              console.warn('delete.before: payload vazio', { data });
+              return;
             }
+
+            const userId = Array.isArray(data)
+              ? data[0] && data[0].id
+              : (data as any).id;
+
+            if (!userId) {
+              console.warn('delete.before: id do usuário não encontrado', {
+                data,
+              });
+              return;
+            }
+
+            const plans = await prisma.studyPlan.findMany({
+              where: { userId },
+              select: { pdfUrl: true },
+            });
+
+            if (plans.length === 0) return;
+
+            const { createClient } = await import('@supabase/supabase-js');
+            const supabase = createClient(
+              process.env.SUPABASE_URL!,
+              process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            );
+
+            for (const plan of plans) {
+              if (!plan.pdfUrl) continue;
+
+              try {
+                const url = new URL(plan.pdfUrl);
+                const pathParts = url.pathname.split('/');
+                const bucketIndex = pathParts.indexOf('study-plans');
+                if (bucketIndex === -1) continue;
+                const filePath = pathParts.slice(bucketIndex + 1).join('/');
+                if (filePath)
+                  await supabase.storage.from('study-plans').remove([filePath]);
+              } catch (err) {
+                console.warn('Erro removendo arquivo do supabase', {
+                  err,
+                  pdfUrl: plan.pdfUrl,
+                });
+              }
+            }
+          } catch (err) {
+            console.error(
+              'Erro no hook delete.before (não aborta a remoção):',
+              err,
+            );
           }
         },
       },
@@ -78,6 +108,9 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+  },
+  session: {
+    freshAge: 60 * 60,
   },
   trustedOrigins: [frontendUrl],
   advanced: {

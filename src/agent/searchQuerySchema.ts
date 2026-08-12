@@ -9,12 +9,12 @@ export const SearchQuerySchema = z.object({
 
   level: z
     .enum(['beginner', 'intermediate', 'advanced'])
-    .optional()
+    .nullish()
     .describe('Nível mencionado pelo usuário.'),
 
   searchQuery: z
     .string()
-    .optional()
+    .nullish()
     .describe(
       'Consulta otimizada para mecanismos de busca de livros e vídeos.',
     ),

@@ -7,8 +7,8 @@ export const StudyPlanState = Annotation.Root({
   search: Annotation<{
     subject: string;
     intent: 'learn' | 'review' | 'practice' | 'understand' | 'other';
-    level?: 'beginner' | 'intermediate' | 'advanced';
-    searchQuery?: string;
+    level?: 'beginner' | 'intermediate' | 'advanced' | null;
+    searchQuery?: string | null;
   }>({
     reducer: (_prev, next) => next,
     default: () => ({
@@ -36,10 +36,6 @@ export const StudyPlanState = Annotation.Root({
     default: () => '',
   }),
   pdfUrl: Annotation<string>({
-    reducer: (_prev, next) => next,
-    default: () => '',
-  }),
-  studyPlanId: Annotation<string>({
     reducer: (_prev, next) => next,
     default: () => '',
   }),

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from './generated/prisma/client';
+import { PrismaClient } from './src/generated/prisma/client';
 import 'dotenv/config';
 
 @Injectable()
@@ -16,6 +16,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     super({ adapter: pool });
   }
   async onModuleInit() {
+    // Note: this is optional
     await this.$connect();
   }
 }

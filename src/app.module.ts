@@ -11,6 +11,7 @@ import { PdfModule } from './pdf/pdf.module';
 import { AgentModule } from './agent/agent.module';
 import { StudyPlansModule } from './study-plans/study-plans.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     PdfModule,
     AgentModule,
     StudyPlansModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, YoutubeService],

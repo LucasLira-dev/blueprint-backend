@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseBoolPipe,
@@ -82,7 +83,18 @@ export class StudyPlansController {
   }
 
   @Get('plans')
-  async getPlans(@Session() session: UserSession) {
+  async getPlans(
+    @Query('userId') userId: string,
+    @Session() session: UserSession,
+  ) {
+    if (userId && userId !== session.user.id) {
+      if (session.user.role !== 'admin') {
+        throw new ForbiddenException(
+          'Apenas administradores podem visualizar planos de outros usuários.',
+        );
+      }
+      return this.studyPlansService.getPlans(userId);
+    }
     return this.studyPlansService.getPlans(session.user.id);
   }
 

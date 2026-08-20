@@ -34,7 +34,7 @@ export class StudyPlansController {
   async generate(
     @Query('topic') topic: string,
     @Session() session: UserSession,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const userId = session.user.id;
     const threadId = randomUUID();

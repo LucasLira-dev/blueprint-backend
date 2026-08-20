@@ -37,12 +37,24 @@ export function buildGenerateStudyPlanNode() {
       label: 'Gerando o cronograma de estudos...',
     });
 
-    const response = await llm.invoke(buildPrompt(state));
-    const content = response.content;
-    const syllabus =
-      typeof content === 'string'
-        ? content
-        : content.map((c) => (typeof c === 'string' ? c : c.text)).join('');
+    const stream = await llm.stream(buildPrompt(state));
+    let syllabus = '';
+
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      const text =
+        typeof content === 'string'
+          ? content
+          : content.map((c) => (typeof c === 'string' ? c : c.text)).join('');
+      if (text) {
+        syllabus += text;
+        config.writer?.({
+          step: 'syllabusChunk',
+          status: 'streaming',
+          label: text,
+        });
+      }
+    }
 
     config.writer?.({
       step: 'generateStudyPlan',

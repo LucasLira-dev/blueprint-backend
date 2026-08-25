@@ -6,6 +6,7 @@ import { admin } from 'better-auth/plugins';
 import { PrismaClient } from '../generated/prisma/client';
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { expo } from '@better-auth/expo';
 
 type Role = 'admin' | 'user';
 
@@ -112,7 +113,7 @@ export const auth = betterAuth({
   session: {
     freshAge: 60 * 60,
   },
-  trustedOrigins: [frontendUrl],
+  trustedOrigins: [frontendUrl, 'blueprintmobile://'],
   advanced: {
     defaultCookieAttributes: {
       sameSite: isHttpsFrontend ? 'None' : 'Lax',
@@ -137,6 +138,7 @@ export const auth = betterAuth({
       defaultRole: 'user' as Role,
       adminRoles: ['admin'] as Role[],
     }),
+    expo(),
   ],
   hooks: {},
 });

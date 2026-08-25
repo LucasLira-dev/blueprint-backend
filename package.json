@@ -21,6 +21,7 @@
     "search:books": "ts-node scripts/search-books.ts"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.7.1",
     "@googleapis/books": "^8.0.1",
     "@googleapis/youtube": "^33.0.0",
     "@langchain/google-genai": "^2.2.0",

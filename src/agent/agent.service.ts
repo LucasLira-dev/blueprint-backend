@@ -84,4 +84,8 @@ export class AgentService implements OnModuleInit {
     });
     return snapshot.values as StudyPlanStateType;
   }
+
+  getCheckpointer(): PostgresSaver {
+    return this.checkpointer;
+  }
 }

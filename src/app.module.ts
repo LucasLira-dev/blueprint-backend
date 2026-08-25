@@ -12,6 +12,7 @@ import { AgentModule } from './agent/agent.module';
 import { StudyPlansModule } from './study-plans/study-plans.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module';
+import { ConversationsModule } from './conversations/conversations.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminModule } from './admin/admin.module';
     AgentModule,
     StudyPlansModule,
     AdminModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, YoutubeService],

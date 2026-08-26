@@ -15,9 +15,15 @@ export function buildFetchVideosNode(youtubeService: YoutubeService) {
     config.writer?.({
       step: 'fetchVideos',
       status: 'done',
-      label: `Foram encontrados ${videos.length} videos sobre o tema "${state.topic}".`,
+      label: `Foram encontrados ${videos.length} videos sobre o tema "${truncar(state.topic, 50)}".`,
     });
 
     return { videos };
   };
+}
+
+export function truncar(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+
+  return text.slice(0, maxLength - 3).trimEnd() + '...';
 }

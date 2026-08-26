@@ -1,6 +1,7 @@
 import { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { BooksService } from 'src/books/books.service';
 import { StudyPlanStateType } from '../state/study-plan.state';
+import { truncar } from './fetch-videos.node';
 
 export function buildFetchBooksNode(booksService: BooksService) {
   return async (state: StudyPlanStateType, config: LangGraphRunnableConfig) => {
@@ -15,7 +16,7 @@ export function buildFetchBooksNode(booksService: BooksService) {
     config.writer?.({
       step: 'fetchBooks',
       status: 'done',
-      label: `Foram encontrados ${books.length} livros sobre o tema "${state.topic}".`,
+      label: `Foram encontrados ${books.length} livros sobre o tema "${truncar(state.topic, 50)}".`,
     });
 
     return { books };

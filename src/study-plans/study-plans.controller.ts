@@ -20,6 +20,7 @@ import { randomUUID } from 'crypto';
 import { BetterAuthThrottlerGuard } from 'src/common/guards/user-throttler.guard';
 import { Throttle } from '@nestjs/throttler';
 import { Visibility } from 'src/generated/prisma/enums';
+import { isModelAllowed, DEFAULT_MODEL } from 'src/agent/llm.factory';
 
 @Controller('study-plans')
 export class StudyPlansController {
@@ -32,6 +33,7 @@ export class StudyPlansController {
   @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
   @Get('generate')
   async generate(
+    @Query('model') model: string,
     @Query('topic') topic: string,
     @Session() session: UserSession,
     @Res({ passthrough: true }) res: Response,
@@ -43,11 +45,26 @@ export class StudyPlansController {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
+    const modelId = model ?? DEFAULT_MODEL;
+
+    if (!isModelAllowed(modelId)) {
+      res.write(
+        `data: ${JSON.stringify({
+          step: 'error',
+          status: 'error',
+          label: `Modelo não suportado: ${modelId}`,
+        })}\n\n`,
+      );
+      res.end();
+      return;
+    }
+
     try {
       for await (const event of this.agentService.streamGeneration(
         topic,
         userId,
         threadId,
+        modelId,
       )) {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
       }

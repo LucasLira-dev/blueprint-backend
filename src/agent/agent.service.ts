@@ -59,11 +59,17 @@ export class AgentService implements OnModuleInit {
     return graph.compile({ checkpointer: this.checkpointer });
   }
 
-  async *streamGeneration(topic: string, userId: string, threadId: string) {
+  async *streamGeneration(
+    topic: string,
+    userId: string,
+    threadId: string,
+    model?: string,
+  ) {
     const stream = await this.app.stream(
       {
         topic,
         userId,
+        model,
       },
       {
         streamMode: 'custom',

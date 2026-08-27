@@ -1,6 +1,7 @@
 import { Annotation } from '@langchain/langgraph';
 import { VideoResult } from 'src/youtube/youtube.service';
 import { BookResult } from 'src/books/books.service';
+import { DEFAULT_MODEL } from '../llm.factory';
 
 export const StudyPlanState = Annotation.Root({
   topic: Annotation<string>,
@@ -38,6 +39,10 @@ export const StudyPlanState = Annotation.Root({
   pdfUrl: Annotation<string>({
     reducer: (_prev, next) => next,
     default: () => '',
+  }),
+  model: Annotation<string>({
+    reducer: (_prev, next) => next,
+    default: () => DEFAULT_MODEL,
   }),
 });
 

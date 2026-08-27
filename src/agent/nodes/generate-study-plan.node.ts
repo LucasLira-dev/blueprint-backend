@@ -1,12 +1,6 @@
 import { LangGraphRunnableConfig } from '@langchain/langgraph';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { StudyPlanStateType } from '../state/study-plan.state';
-
-const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
-  apiKey: process.env.GOOGLE_API_KEY,
-  temperature: 0.4,
-});
+import { getLlm } from '../llm.factory';
 
 function buildPrompt(state: StudyPlanStateType): string {
   const videosList = state.videos
@@ -36,6 +30,8 @@ export function buildGenerateStudyPlanNode() {
       status: 'start',
       label: 'Gerando o cronograma de estudos...',
     });
+
+    const llm = getLlm(state.model, { temperature: 0.4 });
 
     const stream = await llm.stream(buildPrompt(state));
     let syllabus = '';

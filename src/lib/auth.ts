@@ -110,9 +110,6 @@ export const auth = betterAuth({
       enabled: true,
     },
   },
-  session: {
-    freshAge: 60 * 60,
-  },
   trustedOrigins: [frontendUrl, 'blueprintmobile://'],
   advanced: {
     defaultCookieAttributes: {

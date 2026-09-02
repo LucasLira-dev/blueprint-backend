@@ -22,7 +22,7 @@ if (!process.env.FRONTEND_URL) {
 }
 
 const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-const isHttpsFrontend = frontendUrl.startsWith('https://');
+//const isHttpsFrontend = frontendUrl.startsWith('https://');
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
@@ -110,11 +110,24 @@ export const auth = betterAuth({
       enabled: true,
     },
   },
-  trustedOrigins: [frontendUrl, 'blueprintmobile://'],
+  trustedOrigins: [
+    frontendUrl,
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
+      ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : []),
+    'blueprintmobile://',
+    'exp://',
+    'http://localhost:3001',
+    'http://localhost:8081',
+    'http://192.168.0.107:3001',
+    'http://192.168.0.107:8081',
+  ],
   advanced: {
     defaultCookieAttributes: {
-      sameSite: isHttpsFrontend ? 'None' : 'Lax',
-      secure: isHttpsFrontend,
+      sameSite: 'None',
+      secure: true,
     },
   },
   socialProviders: {

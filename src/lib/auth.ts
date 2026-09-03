@@ -119,15 +119,17 @@ export const auth = betterAuth({
       : []),
     'blueprintmobile://',
     'exp://',
+    'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:8081',
+    'http://192.168.0.107:3000',
     'http://192.168.0.107:3001',
     'http://192.168.0.107:8081',
   ],
   advanced: {
     defaultCookieAttributes: {
-      sameSite: 'None',
-      secure: true,
+      sameSite: 'none',
+      secure: process.env.BETTER_AUTH_URL?.startsWith('https') ?? false,
     },
   },
   socialProviders: {

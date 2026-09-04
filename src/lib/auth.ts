@@ -35,6 +35,10 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 6,
   },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
   additionalFields: {
     role: {
       type: 'string',
@@ -128,7 +132,7 @@ export const auth = betterAuth({
   ],
   advanced: {
     defaultCookieAttributes: {
-      sameSite: 'none',
+      sameSite: process.env.FRONTEND_URL?.startsWith('https') ? 'none' : 'lax',
       secure: process.env.BETTER_AUTH_URL?.startsWith('https') ?? false,
     },
   },

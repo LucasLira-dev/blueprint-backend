@@ -4,8 +4,8 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -26,21 +26,22 @@ enum Status {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  studyPlans StudyPlan[]
+  id                  String              @id
+  name                String
+  email               String
+  studyPlans          StudyPlan[]
   favoritesStudyPlans FavoriteStudyPlan[]
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          String?
-  banned        Boolean?  @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
+  emailVerified       Boolean             @default(false)
+  image               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  role                String?
+  banned              Boolean?            @default(false)
+  banReason           String?
+  banExpires          DateTime?
+  sessions            Session[]
+  accounts            Account[]
+  quizAttempts        QuizAttempt[]
 
   @@unique([email])
   @@map("user")
@@ -98,65 +99,121 @@ model Verification {
 }
 
 model StudyPlan {
-  id String @id @default(uuid())
-  topic String
-  syllabus String @db.Text
-  visibility Visibility @default(PRIVATE)
-  status Status @default(PENDING)
-  pdfUrl String?
-  threadId String?
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  videos VideoResource[]
-  books BookResource[]
-  favorites FavoriteStudyPlan[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String                @id @default(uuid())
+  topic                String
+  syllabus             String                @db.Text
+  visibility           Visibility            @default(PRIVATE)
+  status               Status                @default(PENDING)
+  pdfUrl               String?
+  threadId             String?
+  userId               String
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos               VideoResource[]
+  books                BookResource[]
+  favorites            FavoriteStudyPlan[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deepLearningContents DeepLearningContent[]
 
   @@index([userId])
   @@index([visibility])
 }
 
 model VideoResource {
-  id String @id @default(uuid())
+  id          String    @id @default(uuid())
   studyPlanId String
-  title String
-  videoUrl String
-  videoId String
-  thumbnail String?
+  title       String
+  videoUrl    String
+  videoId     String
+  thumbnail   String?
   channelName String?
-  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  studyPlan   StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([studyPlanId])
 }
 
 model BookResource {
-  id String @id @default(uuid())
+  id          String    @id @default(uuid())
   studyPlanId String
-  title String
-  authors String[]
+  title       String
+  authors     String[]
   description String?
-  infoLink String?
-  thumbnail String?
-  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  infoLink    String?
+  thumbnail   String?
+  studyPlan   StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([studyPlanId])
 }
 
 model FavoriteStudyPlan {
-  id String @id @default(uuid())
-  userId String
+  id          String    @id @default(uuid())
+  userId      String
   studyPlanId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studyPlan StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyPlan   StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([userId, studyPlanId])
   @@index([userId])
   @@index([studyPlanId])
+}
+
+model DeepLearningContent {
+  id           String         @id @default(uuid())
+  studyPlanId  String
+  title        String
+  summary      String         @db.Text
+  status       Status         @default(PENDING)
+  topics       DeepTopic[]
+  questions    QuizQuestion[]
+  studyPlan    StudyPlan      @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  quizAttempts QuizAttempt[]
+
+  @@index([studyPlanId])
+}
+
+model DeepTopic {
+  id                    String              @id @default(uuid())
+  slug                  String              @unique
+  deepLearningContentId String              @unique
+  title                 String
+  description           String              @db.Text
+  content               String              @db.Text
+  order                 Int
+  deepLearningContent   DeepLearningContent @relation(fields: [deepLearningContentId], references: [id], onDelete: Cascade)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([deepLearningContentId])
+}
+
+model QuizQuestion {
+  id                    String              @id @default(uuid())
+  deepLearningContentId String
+  question              String
+  options               String[]
+  correctAnswer         String
+  explanation           String
+  order                 Int
+  deepLearningContent   DeepLearningContent @relation(fields: [deepLearningContentId], references: [id], onDelete: Cascade)
+}
+
+model QuizAttempt {
+  id                    String              @id @default(uuid())
+  userId                String
+  deepLearningContentId String
+  score                 Int
+  total                 Int
+  answers               Json
+  deepLearningContent   DeepLearningContent @relation(fields: [deepLearningContentId], references: [id], onDelete: Cascade)
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }

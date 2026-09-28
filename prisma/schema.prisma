@@ -181,7 +181,7 @@ model DeepLearningContent {
 
 model DeepTopic {
   id                    String              @id @default(uuid())
-  slug                  String              @unique
+  slug                  String              
   deepLearningContentId String              
   title                 String
   description           String              @db.Text
@@ -191,7 +191,7 @@ model DeepTopic {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  @@index([deepLearningContentId])
+  @@index([deepLearningContentId, slug])
 }
 
 model QuizQuestion {

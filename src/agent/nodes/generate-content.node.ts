@@ -4,8 +4,11 @@ import { DeepLearningStateType } from '../state/deep-learning.state';
 import { getLlm } from '../llm.factory';
 
 const MODEL_ID = 'qwen/qwen3.8-27b';
+const CONTENT_MODEL_ID = 'openai/gpt-oss-120b';
+
 const CONTENT_BATCH_SIZE = 3;
-const MAX_TOKENS = 4_096;
+const SUMMARY_MAX_TOKENS = 512;
+const CONTENT_MAX_TOKENS = 2_500;
 
 const SYSTEM_PROMPT = `Você é um educador sênior do Blueprint, responsável por transformar uma syllabus e resultados de pesquisa em um aprendizado profundo, claro e prático para alunos.
 
@@ -124,13 +127,20 @@ export function buildGenerateContentNode() {
       label: 'Gerando conteúdo do aprendizado...',
     });
 
-    const model = getLlm(MODEL_ID, { temperature: 0.4, maxTokens: MAX_TOKENS });
+    const SummaryModel = getLlm(MODEL_ID, {
+      temperature: 0.4,
+      maxTokens: SUMMARY_MAX_TOKENS,
+    });
+    const ContentModel = getLlm(CONTENT_MODEL_ID, {
+      temperature: 0.4,
+      maxTokens: CONTENT_MAX_TOKENS,
+    });
     const batches = chunk(state.topics, CONTENT_BATCH_SIZE);
 
     const start = Date.now();
 
     const summary = (
-      await model.withStructuredOutput(summarySchema, {}).invoke([
+      await SummaryModel.withStructuredOutput(summarySchema, {}).invoke([
         { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
@@ -144,12 +154,13 @@ export function buildGenerateContentNode() {
     const contentById = new Map<string, string>();
 
     for (const [index, batch] of batches.entries()) {
-      const result = await model
-        .withStructuredOutput(contentBatchSchema, {})
-        .invoke([
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildBatchPrompt(state, batch) },
-        ]);
+      const result = await ContentModel.withStructuredOutput(
+        contentBatchSchema,
+        {},
+      ).invoke([
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: buildBatchPrompt(state, batch) },
+      ]);
 
       console.log(`Batch ${index + 1}: ${(Date.now() - start) / 1000}s`);
 

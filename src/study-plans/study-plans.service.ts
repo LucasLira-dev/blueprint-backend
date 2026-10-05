@@ -192,6 +192,12 @@ export class StudyPlansService {
       },
     });
 
+    const hasDeepLearningContent =
+      await this.prisma.deepLearningContent.findFirst({
+        where: { studyPlanId: planId, studyPlan: { userId } },
+        select: { id: true },
+      });
+
     if (!plan) {
       throw new BadRequestException('Plano de estudo não encontrado.');
     }
@@ -202,7 +208,10 @@ export class StudyPlansService {
       );
     }
 
-    return plan;
+    return {
+      ...plan,
+      hasDeepLearningContent: Boolean(hasDeepLearningContent),
+    };
   }
 
   async changeVisibility(

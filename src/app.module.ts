@@ -13,6 +13,7 @@ import { StudyPlansModule } from './study-plans/study-plans.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module';
 import { ConversationsModule } from './conversations/conversations.module';
+import { DeepLearningModule } from './deep-learning/deep-learning.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ConversationsModule } from './conversations/conversations.module';
     StudyPlansModule,
     AdminModule,
     ConversationsModule,
+    DeepLearningModule,
   ],
   controllers: [AppController],
   providers: [AppService, YoutubeService],

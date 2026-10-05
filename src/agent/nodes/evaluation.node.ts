@@ -1,5 +1,8 @@
 import { LangGraphRunnableConfig } from '@langchain/langgraph';
-import { DeepLearningStateType } from '../state/deep-learning.state';
+import {
+  DeepLearningStateType,
+  EvaluationResult,
+} from '../state/deep-learning.state';
 import { getLlm } from '../llm.factory';
 import { evaluationSchema } from '../schemas/evaluationSchema';
 
@@ -23,37 +26,38 @@ Avalie o material recebido e retorne:
 - Seja rigoroso, mas não invente problemas: se o material estiver bom, diga que está bom e aprove.
 - Não reescreva o conteúdo, apenas avalie.
 - Considere apenas o material e a syllabus fornecidos; não use conhecimento externo para exigir detalhes extras.
-- Retorne apenas os campos do schema, sem texto extra ao redor.`;
+- "missingTopics" só aceita subtópicos da lista informada: nunca coloque nomes de vídeos, livros ou URLs.
+- Retorne apenas os campos do schema, sem texto extra ao redor.
+
+## Formato da resposta
+JSON válido, sem texto antes ou depois, com os 4 campos sempre presentes:
+
+{
+  "approved": true | false,
+  "score": 0,
+  "missingTopics": [],
+  "feedback": "2 a 5 frases"
+}`;
 
 function buildUserPrompt(state: DeepLearningStateType): string {
+  const MAX_CONTENT_CHARS = 16000;
+  let remainingChars = MAX_CONTENT_CHARS;
+
   const contentByTopic = state.topics
-    .map((t) =>
-      [
+    .map((t) => {
+      const content = t.content?.trim() || '(vazio)';
+      const excerpt = content.slice(0, Math.max(0, remainingChars));
+
+      remainingChars -= excerpt.length;
+
+      return [
         `## id: ${t.id} — ${t.title}`,
         `Descrição: ${t.description}`,
         `Conteúdo gerado:`,
-        t.content?.trim() ? t.content.trim() : '(vazio)',
-      ].join('\n'),
-    )
+        excerpt || '(conteúdo omitido por limite de tamanho)',
+      ].join('\n');
+    })
     .join('\n\n');
-
-  const research = state.researchResults.length
-    ? state.researchResults
-        .map((r) => {
-          const sources = r.sources
-            .map((s) => `    - ${s.title} (${s.url})`)
-            .join('\n');
-          return [
-            `### ${r.topicId} — ${r.title}`,
-            `Resumo: ${r.summary}`,
-            `Pontos-chave:`,
-            ...r.keyPoints.map((k) => `  - ${k}`),
-            `Fontes:`,
-            sources || '    - nenhuma',
-          ].join('\n');
-        })
-        .join('\n\n')
-    : 'Nenhuma pesquisa disponível. Avalie o material apenas com base na syllabus.';
 
   return `Tema geral:
     ${state.topic}
@@ -69,10 +73,32 @@ function buildUserPrompt(state: DeepLearningStateType): string {
     Conteúdo por subtópico:
     ${contentByTopic || 'Nenhum conteúdo gerado.'}
 
-    Pesquisa por subtópico (referência, use apenas para checar fidelidade):
-    ${research}
-
     Rodada de revisão: ${state.revisionCount}`;
+}
+
+const EVALUATION_MODEL = 'google/gemma-4-26b-a4b-it:free';
+const FALLBACK_EVALUATION_MODEL = 'google/gemma-4-31b-it:free';
+
+async function evaluate(
+  state: DeepLearningStateType,
+): Promise<EvaluationResult> {
+  const messages = [
+    { role: 'system' as const, content: SYSTEM_PROMPT },
+    { role: 'user' as const, content: buildUserPrompt(state) },
+  ];
+
+  const run = async (modelId: string): Promise<EvaluationResult> => {
+    const evaluator = getLlm(modelId, {
+      temperature: 0.4,
+    }).withStructuredOutput(evaluationSchema, {});
+    return (await evaluator.invoke(messages)) as EvaluationResult;
+  };
+
+  try {
+    return await run(EVALUATION_MODEL);
+  } catch {
+    return await run(FALLBACK_EVALUATION_MODEL);
+  }
 }
 
 export const buildEvaluationNode = () => {
@@ -86,19 +112,9 @@ export const buildEvaluationNode = () => {
       label: 'Avaliando o desempenho...',
     });
 
-    const llm = getLlm('openai/gpt-oss-20b', { temperature: 0.4 });
-    const evaluator = llm.withStructuredOutput(evaluationSchema, {});
+    const result = await evaluate(state);
 
-    const result = await evaluator.invoke([
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: buildUserPrompt(state),
-      },
-    ]);
+    console.log('Avaliação concluída com sucesso. Resultados:', result);
 
     config.writer?.({
       step: 'evaluation',
@@ -106,11 +122,18 @@ export const buildEvaluationNode = () => {
       label: `Avaliação concluída com sucesso.`,
     });
 
+    const validTopics = new Set(
+      state.topics.flatMap((t) => [t.id.toLowerCase(), t.title.toLowerCase()]),
+    );
+    const missingTopics = result.missingTopics
+      .map((t) => t.trim())
+      .filter((t) => validTopics.has(t.toLowerCase()));
+
     return {
       evaluation: {
         approved: result.approved,
         score: result.score,
-        missingTopics: result.missingTopics,
+        missingTopics,
         feedback: result.feedback,
       },
       revisionCount: state.revisionCount + 1,

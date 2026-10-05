@@ -203,6 +203,8 @@ model QuizQuestion {
   explanation           String
   order                 Int
   deepLearningContent   DeepLearningContent @relation(fields: [deepLearningContentId], references: [id], onDelete: Cascade)
+
+  @@index([deepLearningContentId])
 }
 
 model QuizAttempt {
@@ -214,6 +216,8 @@ model QuizAttempt {
   answers               Json
   deepLearningContent   DeepLearningContent @relation(fields: [deepLearningContentId], references: [id], onDelete: Cascade)
   user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([deepLearningContentId])
 }

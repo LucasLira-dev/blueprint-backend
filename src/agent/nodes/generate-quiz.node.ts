@@ -6,19 +6,36 @@ import { quizSchema } from '../schemas/quizSchema';
 const SYSTEM_PROMPT = `Você é o avaliador do Blueprint, especialista em criar questões de múltipla escolha que verificam se o aluno realmente entendeu o conteúdo.
 
 ## Tarefa
-Gere UMA questão no formato do schema:
-1. "question": o enunciado, objetivo e sem pistas que revelem a resposta.
-2. "options": 4 alternativas, com uma única correta. Devem ter tamanhos parecidos, variar entre correta e incorretas e nunca incluir "todas as alternativas" ou "nenhuma das alternativas".
-3. "correctAnswer": o texto EXATO, copiado sem alterações, de uma das alternativas em "options".
-4. "explanation": 1 a 3 frases explicando por que a alternativa correta é a correta e por que as outras são enganosas.
+Gere DEZ questões e retorne obrigatoriamente um objeto JSON no seguinte formato:
+
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["...", "...", "...", "..."],
+      "correctAnswer": "...",
+      "explanation": "..."
+    }
+  ]
+}
+
+Cada questão deve seguir estas regras:
+1. "question": enunciado objetivo e sem pistas que revelem a resposta.
+2. "options": exatamente 4 alternativas, com uma única correta. Devem ter tamanhos parecidos, variar entre correta e incorretas e nunca incluir "todas as alternativas" ou "nenhuma das alternativas".
+3. "correctAnswer": texto EXATO, copiado sem alterações, de uma das alternativas em "options".
+4. "explanation": de 1 a 3 frases explicando por que a alternativa correta é correta e por que as outras são enganosas.
 
 ## Regras
-- Baseie a questão exclusivamente no material fornecido: nada de exigir conhecimento externo ou detalhes que não foram ensinados.
-- Não use expressões como "conforme vimos acima" ou qualquer referência ao material: o enunciado deve ser autossuficiente.
+- Retorne exatamente 10 questões dentro de "questions".
+- Baseie as questões exclusivamente no material fornecido.
+- Não exija conhecimento externo ou detalhes que não foram ensinados.
+- Não use expressões como "conforme vimos acima" ou qualquer referência ao material.
 - Evite ambiguidade: apenas uma alternativa pode ser defendida como correta.
-- Escreva em português do Brasil, linguagem didática e frases curtas.
-- Formate o enunciado em Markdown, com o código inline quando mencionar um termo técnico, ex.: \`useState\`.
-- Não revele qual é a alternativa correta no enunciado e não use letras ou números nas alternativas (a formatação fica por conta da aplicação).`;
+- Escreva em português do Brasil, com linguagem didática e frases curtas.
+- Formate o enunciado em Markdown, usando código inline ao mencionar termos técnicos, por exemplo: \`useState\`.
+- Não revele a resposta no enunciado.
+- Não use letras ou números nas alternativas; a formatação fica por conta da aplicação.
+- Não adicione propriedades além de "questions", "question", "options", "correctAnswer" e "explanation".`;
 
 function buildUserPrompt(state: DeepLearningStateType): string {
   const topicsList = state.topics
@@ -79,6 +96,8 @@ export const buildGenerateQuizNode = () => {
       },
     ]);
 
+    console.log('Quiz gerado:', result);
+
     config.writer?.({
       step: 'generateQuiz',
       status: 'done',
@@ -86,14 +105,7 @@ export const buildGenerateQuizNode = () => {
     });
 
     return {
-      quiz: [
-        {
-          question: result.question,
-          options: result.options,
-          correctAnswer: result.correctAnswer,
-          explanation: result.explanation,
-        },
-      ],
+      quiz: result.questions ?? [],
     };
   };
 };

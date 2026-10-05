@@ -9,5 +9,6 @@ import { SupabaseStorageService } from 'src/storage/supabase-storage.service';
   imports: [AgentModule],
   controllers: [StudyPlansController],
   providers: [StudyPlansService, PrismaService, SupabaseStorageService],
+  exports: [StudyPlansService],
 })
 export class StudyPlansModule {}

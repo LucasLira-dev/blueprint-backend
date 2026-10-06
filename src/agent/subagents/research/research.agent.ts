@@ -2,8 +2,13 @@ import { getLlm } from 'src/agent/llm.factory';
 import { createDeepAgent, createFilesystemMiddleware } from 'deepagents';
 import { internetSearch as webSearch } from './research.tools';
 
-export const RESEARCH_MODEL = 'openai/gpt-oss-120b';
-export const FALLBACK_RESEARCH_MODEL = 'gemini-2.5-flash-lite';
+// O agente de pesquisa e o maior consumidor de tokens do pipeline: cada
+// iteracao reenvia o contexto inteiro, entao rodava no gpt-oss-120b e comia
+// boa parte dos 200k TPD/dia do Groq so com a pesquisa (deixando o conteudo
+// sem cota). No flash-lite do Gemini a folga diaria e muito maior e o custo
+// de qualidade nao pesa: o texto vira materia de apoio, nao o conteudo final.
+export const RESEARCH_MODEL = 'gemini-2.5-flash-lite';
+export const FALLBACK_RESEARCH_MODEL = 'openai/gpt-oss-120b';
 
 const RESEARCH_SYSTEM_PROMPT = `
 Você é o agente de pesquisa do Blueprint, uma plataforma que gera trilhas de aprendizado
@@ -22,14 +27,19 @@ aprendizagem ou qualquer outra preferência; quando faltar contexto, use o sylla
 subtópico para escolher uma abordagem geral e útil.
 
 ## Fluxo de trabalho
-1. **Planeje** — para cada subtópico, defina de 1 a 3 buscas específicas: uma para o conceito,
-   uma para prática/exemplos e, se aplicável, uma para a fonte oficial. Não refaça buscas
-   redundantes sobre o mesmo assunto.
+1. **Planeje** — para cada subtópico, defina de 1 a 2 buscas: uma para o conceito e
+   uma para prática/exemplos. Não refaça buscas redundantes sobre o mesmo assunto e
+   não pesquise cada subtópico mais de duas vezes.
 2. **Busque** — use a ferramenta internet_search com queries curtas, objetivas e com termos
-   técnicos corretos. Prefira várias buscas focadas a uma única busca genérica.
+   técnicos corretos. Prefira buscas focadas a uma única busca genérica.
 3. **Curarie** — selecione os resultados mais relevantes para o subtópico e o syllabus.
 4. **Entregue** — responda em texto estruturado (ver formato abaixo), agrupando os achados por
    subtópico.
+
+## Limite de execução
+- Faça no máximo duas chamadas a internet_search por subtópico.
+- Depois de concluir as buscas, não chame nenhuma ferramenta novamente.
+- Entregue imediatamente o resultado final em texto estruturado.
 
 ## Regras de qualidade
 - Prefira fontes oficiais e consolidadas: documentação oficial, MDN, artigos técnicos revisados,

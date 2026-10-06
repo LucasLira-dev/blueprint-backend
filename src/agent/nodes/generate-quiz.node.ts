@@ -1,6 +1,12 @@
 import { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { DeepLearningStateType } from '../state/deep-learning.state';
-import { getLlm } from '../llm.factory';
+import {
+  DEFAULT_MODEL,
+  QUIZ_MODELS,
+  getLlm,
+  isModelAllowed,
+} from '../llm.factory';
+import { invokeWithFallback, isQuotaError } from '../llm-retry';
 import { quizSchema } from '../schemas/quizSchema';
 
 const SYSTEM_PROMPT = `Você é o avaliador do Blueprint, especialista em criar questões de múltipla escolha que verificam se o aluno realmente entendeu o conteúdo.
@@ -82,30 +88,58 @@ export const buildGenerateQuizNode = () => {
       label: 'Gerando quiz do aprendizado...',
     });
 
-    const model = getLlm(state.model, { temperature: 0.4 });
-    const generator = model.withStructuredOutput(quizSchema, {});
+    const generate = (modelId: string) =>
+      getLlm(modelId, { temperature: 0.4 })
+        .withStructuredOutput(quizSchema, {})
+        .invoke([
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: buildUserPrompt(state),
+          },
+        ]);
 
-    const result = await generator.invoke([
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: buildUserPrompt(state),
-      },
-    ]);
+    try {
+      const run = await invokeWithFallback(
+        [...QUIZ_MODELS, state.model, DEFAULT_MODEL],
+        generate,
+        isModelAllowed,
+      );
 
-    console.log('Quiz gerado:', result);
+      const questions = run.value.questions ?? [];
+      console.log(`Quiz gerado (${run.modelId}): ${questions.length} questões`);
 
-    config.writer?.({
-      step: 'generateQuiz',
-      status: 'done',
-      label: `Quiz gerado com sucesso.`,
-    });
+      config.writer?.({
+        step: 'generateQuiz',
+        status: 'done',
+        label: `Quiz gerado com sucesso.`,
+      });
 
-    return {
-      quiz: result.questions ?? [],
-    };
+      return {
+        quiz: run.value.questions ?? [],
+      };
+    } catch (error) {
+      // O conteudo ja esta validado. Se so a cota do quiz estourou, entregar a
+      // trilha sem quiz vale mais do que descartar tudo na ultima etapa.
+      if (isQuotaError(error)) {
+        console.warn(
+          'Cota esgotada antes do quiz; entregando sem quiz:',
+          error,
+        );
+
+        config.writer?.({
+          step: 'generateQuiz',
+          status: 'done',
+          label: 'Quiz pulado por limite de uso; o conteúdo está completo.',
+        });
+
+        return { quiz: [] };
+      }
+
+      throw error;
+    }
   };
 };

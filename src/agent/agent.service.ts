@@ -17,7 +17,7 @@ import {
 } from './state/deep-learning.state';
 import { buildExtractTopicsNode } from './nodes/extract-topics.node';
 import { buildResearchTopicsNode } from './nodes/research-topics.node';
-import { buildGenerateContentNode } from './nodes/generate-content.node';
+import { buildGenerateContentNode } from './nodes/generate-content/generate-content.node';
 import { buildEvaluationNode } from './nodes/evaluation.node';
 import { buildGenerateQuizNode } from './nodes/generate-quiz.node';
 

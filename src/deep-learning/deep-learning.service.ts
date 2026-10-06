@@ -24,6 +24,18 @@ export class DeepLearningService {
       );
     }
 
+    // `DeepTopic.content` é obrigatório no banco: nunca gravar tópico vazio.
+    const topics = state.topics.filter(
+      (topic): topic is typeof topic & { content: string } =>
+        typeof topic.content === 'string' && topic.content.trim().length > 0,
+    );
+
+    if (!topics.length) {
+      throw new BadRequestException(
+        `Nenhum tópico com conteúdo para salvar no plano ${studyPlanId}`,
+      );
+    }
+
     return this.prisma.deepLearningContent.create({
       data: {
         studyPlanId,
@@ -31,8 +43,8 @@ export class DeepLearningService {
         summary: state.summary,
         status: 'COMPLETED',
         topics: {
-          create: state.topics.map((topic, index) => ({
-            content: topic.content ?? '',
+          create: topics.map((topic, index) => ({
+            content: topic.content,
             title: topic.title,
             description: topic.description,
             slug: topic.id,
@@ -40,7 +52,7 @@ export class DeepLearningService {
           })),
         },
         questions: {
-          create: state.quiz.map((question, index) => ({
+          create: (state.quiz ?? []).map((question, index) => ({
             question: question.question,
             options: question.options,
             correctAnswer: question.correctAnswer,

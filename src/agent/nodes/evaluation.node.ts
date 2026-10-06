@@ -3,7 +3,13 @@ import {
   DeepLearningStateType,
   EvaluationResult,
 } from '../state/deep-learning.state';
-import { getLlm } from '../llm.factory';
+import {
+  DEFAULT_MODEL,
+  EVALUATION_MODELS,
+  getLlm,
+  isModelAllowed,
+} from '../llm.factory';
+import { invokeWithFallback } from '../llm-retry';
 import { evaluationSchema } from '../schemas/evaluationSchema';
 
 const SYSTEM_PROMPT = `Você é o avaliador pedagógico do Blueprint, responsável por verificar se o material de aprendizado gerado cobre a syllabus e é utilizável por um aluno.
@@ -77,7 +83,7 @@ function buildUserPrompt(state: DeepLearningStateType): string {
 }
 
 const EVALUATION_MODEL = 'google/gemma-4-26b-a4b-it:free';
-const FALLBACK_EVALUATION_MODEL = 'google/gemma-4-31b-it:free';
+const FALLBACK_EVALUATION_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
 
 async function evaluate(
   state: DeepLearningStateType,
@@ -94,11 +100,20 @@ async function evaluate(
     return (await evaluator.invoke(messages)) as EvaluationResult;
   };
 
-  try {
-    return await run(EVALUATION_MODEL);
-  } catch {
-    return await run(FALLBACK_EVALUATION_MODEL);
-  }
+  const fallback = await invokeWithFallback(
+    [
+      EVALUATION_MODEL,
+      ...EVALUATION_MODELS,
+      FALLBACK_EVALUATION_MODEL,
+      state.model,
+      DEFAULT_MODEL,
+    ],
+    run,
+    isModelAllowed,
+  );
+  console.log(`Avaliacao (${fallback.modelId}) ok`);
+
+  return fallback.value;
 }
 
 export const buildEvaluationNode = () => {

@@ -5,8 +5,18 @@ import {
   FALLBACK_RESEARCH_MODEL,
   RESEARCH_MODEL,
 } from '../subagents/research/research.agent';
-import { getLlm } from '../llm.factory';
+import {
+  DEFAULT_MODEL,
+  RESEARCH_MODELS,
+  getLlm,
+  isModelAllowed,
+} from '../llm.factory';
+import { invokeWithFallback } from '../llm-retry';
 import { researchResultSchema } from '../schemas/researchSchema';
+
+// 120k chars (~30k tokens) era input puro numa chamada que so precisa de JSON.
+// Com pesquisa vazia ou curta a entrada cai junto.
+const MAX_RESEARCH_CHARS = 48_000;
 
 const FORMATTER_SYSTEM_PROMPT = `
 Você é um editor de pesquisa do Blueprint, responsável por transformar a saída em texto livre do
@@ -49,17 +59,57 @@ Responda SOMENTE com um JSON válido, sem texto antes ou depois, no formato exat
   não pôde ser pesquisado, preserve o objeto com summary descrevendo a pendência e sources: [].
 `;
 
-function extractResearchText(agentResult: unknown): string {
-  const results = agentResult as { messages?: Array<{ content?: unknown }> };
-  const messages = results.messages ?? [];
-  const last = messages[messages.length - 1];
-  if (!last) return '';
+interface ContentLikeMessage {
+  content?: unknown;
+}
 
-  const content = last.content;
-  console.log('Research agent output:', content);
-  return typeof content === 'string'
-    ? content
-    : JSON.stringify(content, null, 2);
+function toText(content: unknown): string {
+  if (typeof content === 'string') return content.trim();
+
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (typeof block === 'string') return block;
+        if (!block || typeof block !== 'object') return '';
+        const value = block as { type?: string; text?: unknown };
+        return typeof value.text === 'string' ? value.text : '';
+      })
+      .join('\n')
+      .trim();
+  }
+
+  return '';
+}
+
+/**
+ * Varre as mensagens de tras para frente atras do ultimo texto nao vazio.
+ * O agente de pesquisa termina com tool calls sem conteudo quando o loop
+ * estoura, e olhar so a ultima mensagem devolvia `[]`.
+ */
+function extractResearchText(agentResult: unknown): string {
+  const results = agentResult as { messages?: ContentLikeMessage[] };
+  const messages = results.messages ?? [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const text = toText(messages[i]?.content);
+    if (text) return text;
+  }
+
+  if (messages.length) {
+    const summary = messages.map((message, index) => {
+      const content = message.content;
+      const preview =
+        typeof content === 'string'
+          ? content.slice(0, 80)
+          : (JSON.stringify(content)?.slice(0, 80) ?? typeof content);
+      return `#${index} type=${typeof content}: ${preview}`;
+    });
+    console.warn('Pesquisa sem texto utilizavel. Mensagens:', summary);
+  } else {
+    console.warn('Pesquisa sem texto utilizavel: nenhuma mensagem retornada.');
+  }
+
+  return '';
 }
 
 export function buildResearchTopicsNode() {
@@ -94,14 +144,34 @@ export function buildResearchTopicsNode() {
       state.model,
     );
 
-    const researchText = extractResearchText(agentResult).slice(0, 120_000);
+    const researchText = extractResearchText(agentResult).slice(
+      0,
+      MAX_RESEARCH_CHARS,
+    );
 
     console.log({
       topicCount: state.topics.length,
-      topics: state.topics,
       researchTextLength: researchText.length,
-      researchText: researchText.slice(0, 2000),
+      researchPreview: researchText.slice(0, 500),
     });
+
+    // Sem texto nao vale a pena chamar o formatter: seria uma request inteira
+    // para um modelo transformar `[]` em JSON. O conteudo sai da syllabus.
+    if (!researchText.trim()) {
+      console.warn('Pesquisa vazia; seguindo apenas com a syllabus.');
+
+      config.writer?.({
+        step: 'researchTopics',
+        status: 'done',
+        label:
+          'Pesquisa indisponível; conteúdo será gerado com base na syllabus.',
+      });
+
+      return {
+        researchResults: [],
+        researchStatus: 'failed' as const,
+      };
+    }
 
     const formattedResults = await formatResearch(state.model, researchText);
 
@@ -125,62 +195,35 @@ export function buildResearchTopicsNode() {
 
 const FALLBACK_FORMATTER_MODEL = 'openai/gpt-oss-120b';
 
-const GROQ_MAX_ATTEMPTS = 3;
-const GROQ_MAX_WAIT_MS = 45_000;
-
-function isRateLimitError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /rate.?limit|\b429\b/i.test(message);
-}
-
-function getRetryDelayMs(error: unknown): number {
-  const message = error instanceof Error ? error.message : String(error);
-  const seconds = message.match(/try again in ([\d.]+)s/i)?.[1];
-  if (!seconds) return 5_000;
-  return Math.min(Math.ceil(Number(seconds) * 1000) + 1_000, GROQ_MAX_WAIT_MS);
-}
-
-async function runWithGroqRetry<T>(fn: () => Promise<T>): Promise<T> {
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= GROQ_MAX_ATTEMPTS; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (!isRateLimitError(error) || attempt === GROQ_MAX_ATTEMPTS)
-        throw error;
-      await new Promise((resolve) =>
-        setTimeout(resolve, getRetryDelayMs(error)),
-      );
-    }
-  }
-
-  throw lastError;
-}
-
 async function runResearchAgent(input: unknown, modelId: string) {
-  const run = (id: string) => buildResearchAgent(id).invoke(input as never);
+  // Recursion limit explícito: sem ele o loop de tool calls pode devorar
+  // a cota diaria do modelo inteira antes de produzir qualquer texto.
+  const RESEARCH_RECURSION_LIMIT = 15;
+
+  const run = (id: string) =>
+    buildResearchAgent(id).invoke(input as never, {
+      recursionLimit: RESEARCH_RECURSION_LIMIT,
+    });
 
   try {
-    return await runWithGroqRetry(() => run(RESEARCH_MODEL));
-  } catch {
-    // Rate limit persistente ou falha do modelo Groq: tenta o modelo escolhido
-    // pelo usuario e, por ultimo, o Gemini.
-    const fallbacks =
-      modelId === RESEARCH_MODEL || modelId === FALLBACK_RESEARCH_MODEL
-        ? [FALLBACK_RESEARCH_MODEL]
-        : [modelId, FALLBACK_RESEARCH_MODEL];
-
-    let lastError: unknown;
-    for (const id of fallbacks) {
-      try {
-        return await run(id);
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    throw lastError;
+    const result = await invokeWithFallback(
+      [
+        RESEARCH_MODEL,
+        ...RESEARCH_MODELS,
+        FALLBACK_RESEARCH_MODEL,
+        modelId,
+        DEFAULT_MODEL,
+      ],
+      (id) => run(id),
+      isModelAllowed,
+    );
+    console.log(`Research agent (${result.modelId}) concluído`);
+    return result.value;
+  } catch (error) {
+    // Fallback do agente ja tentou a lista inteira. Deixa o erro subir para o
+    // controller, que decide entre cota (salva parcial) e falha real.
+    console.error('Research agent falhou:', error);
+    throw error;
   }
 }
 
@@ -194,13 +237,19 @@ async function formatResearch(modelId: string, researchText: string) {
       """
     `;
 
+  const run = (id: string) =>
+    getLlm(id).withStructuredOutput(researchResultSchema, {}).invoke(prompt);
+
   try {
-    const model = getLlm(modelId);
-    const formatter = model.withStructuredOutput(researchResultSchema, {});
-    return await formatter.invoke(prompt);
-  } catch {
-    const model = getLlm(FALLBACK_FORMATTER_MODEL);
-    const formatter = model.withStructuredOutput(researchResultSchema, {});
-    return await formatter.invoke(prompt);
+    const result = await invokeWithFallback(
+      [modelId, FALLBACK_FORMATTER_MODEL, DEFAULT_MODEL],
+      run,
+      isModelAllowed,
+    );
+    console.log(`Formatter (${result.modelId}) ok`);
+    return result.value;
+  } catch (error) {
+    console.error('Formatter de pesquisa falhou:', error);
+    throw error;
   }
 }

@@ -15,7 +15,10 @@ export interface ModelDefinition {
   label: string;
 }
 
-export const DEFAULT_MODEL = 'gemini-2.5-flash';
+// O flash puro do Gemini free tier limita ~20 req/dia; o flash-lite tem
+// ordens de grandeza mais folgadas e o custo de qualidade nao compensa o risco
+// de estourar a cota no primeiro plano.
+export const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
 export const FREE_MODELS: ModelDefinition[] = [
   {
@@ -109,6 +112,43 @@ export function getModelDefinition(id: string): ModelDefinition {
 
 export const DEFAULT_MAX_TOKENS = 8_192;
 
+// As cotas diarias (Groq TPD, Gemini RPD, OpenRouter free RPD) sao por modelo.
+// Espalhar a carga por varios modelos multiplica o budget de requisicoes
+// disponiveis sem custo nenhum. A ordem importa: primeiro o que tem mais folga.
+export const CONTENT_MODELS: string[] = [
+  'openai/gpt-oss-120b',
+  'minimax/minimax-m3',
+  'openai/gpt-oss-20b',
+  'qwen/qwen3.8-27b',
+  'qwen/qwen3.6-27b',
+];
+
+export const SUMMARY_MODELS: string[] = [
+  'minimax/minimax-m3',
+  'qwen/qwen3.6-27b',
+  'openai/gpt-oss-20b',
+];
+
+export const RESEARCH_MODELS: string[] = [
+  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'qwen/qwen3.8-27b',
+];
+
+export const EVALUATION_MODELS: string[] = [
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+];
+
+export const QUIZ_MODELS: string[] = [
+  'openai/gpt-oss-20b',
+  'qwen/qwen3.8-27b',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'qwen/qwen3.6-27b',
+];
+
 export function getLlm(
   modelId: string,
   options: { temperature?: number; maxTokens?: number } = {},
@@ -133,7 +173,7 @@ export function getLlm(
         apiKey: process.env.GOOGLE_API_KEY,
         temperature,
         maxOutputTokens: maxTokens,
-        maxRetries: 2,
+        maxRetries: 0,
       });
       break;
 
@@ -143,7 +183,7 @@ export function getLlm(
         apiKey: process.env.GROQ_API_KEY,
         temperature,
         maxTokens,
-        maxRetries: 2,
+        maxRetries: 0,
         timeout: 120_000,
       });
       break;
@@ -154,7 +194,7 @@ export function getLlm(
         apiKey: process.env.OPENROUTER_API_KEY,
         temperature,
         maxTokens,
-        maxRetries: 2,
+        maxRetries: 0,
         timeout: 120_000,
         configuration: {
           baseURL: OPENROUTER_BASE_URL,

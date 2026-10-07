@@ -86,6 +86,36 @@ export class DeepLearningService {
     });
   }
 
+  async getAllDeepLearningContentByUserId(userId: string) {
+    const plans = await this.prisma.deepLearningContent.findMany({
+      where: {
+        studyPlan: {
+          userId,
+        },
+        status: 'COMPLETED',
+      },
+      include: {
+        studyPlan: {
+          select: {
+            id: true,
+            topic: true,
+            videos: {
+              take: 1,
+              orderBy: { createdAt: 'asc' },
+              select: { thumbnail: true },
+            }
+          }
+        }
+      }
+    })
+
+    return plans.map((plan) => ({
+      id: plan.studyPlanId,
+      title: plan.title,
+      thumbnail: plan.studyPlan.videos[0]?.thumbnail ?? null,
+    }))
+  }
+
   async deleteDeepLearningContent(studyPlanId: string, userId: string) {
     const studyPlan = await this.prisma.studyPlan.findFirst({
       where: {

@@ -107,9 +107,7 @@ export class DeepLearningController {
   }
 
   @Get('all')
-  async getAllDeepLearningByUser(
-    @Session() session: UserSession,
-  ) {
+  async getAllDeepLearningByUser(@Session() session: UserSession) {
     const userId = session.user.id;
     return this.deepLearningService.getAllDeepLearningContentByUserId(userId);
   }

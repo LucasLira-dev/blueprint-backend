@@ -103,17 +103,17 @@ export class DeepLearningService {
               take: 1,
               orderBy: { createdAt: 'asc' },
               select: { thumbnail: true },
-            }
-          }
-        }
-      }
-    })
+            },
+          },
+        },
+      },
+    });
 
     return plans.map((plan) => ({
       id: plan.studyPlanId,
       title: plan.title,
       thumbnail: plan.studyPlan.videos[0]?.thumbnail ?? null,
-    }))
+    }));
   }
 
   async deleteDeepLearningContent(studyPlanId: string, userId: string) {

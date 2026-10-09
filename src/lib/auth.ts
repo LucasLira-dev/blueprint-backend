@@ -7,6 +7,9 @@ import { PrismaClient } from '../generated/prisma/client';
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { expo } from '@better-auth/expo';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('Auth');
 
 type Role = 'admin' | 'user';
 
@@ -53,7 +56,7 @@ export const auth = betterAuth({
         after: async ({ data }) => {
           try {
             if (!data) {
-              console.warn('delete.before: payload vazio', { data });
+              logger.warn('delete.before: payload vazio', { data });
               return;
             }
 
@@ -62,7 +65,7 @@ export const auth = betterAuth({
               : (data as any).id;
 
             if (!userId) {
-              console.warn('delete.before: id do usuário não encontrado', {
+              logger.warn('delete.before: id do usuário não encontrado', {
                 data,
               });
               return;
@@ -93,14 +96,14 @@ export const auth = betterAuth({
                 if (filePath)
                   await supabase.storage.from('study-plans').remove([filePath]);
               } catch (err) {
-                console.warn('Erro removendo arquivo do supabase', {
+                logger.warn('Erro removendo arquivo do supabase', {
                   err,
                   pdfUrl: plan.pdfUrl,
                 });
               }
             }
           } catch (err) {
-            console.error(
+            logger.error(
               'Erro no hook delete.before (não aborta a remoção):',
               err,
             );

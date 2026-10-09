@@ -16,6 +16,9 @@ import {
   isValidTopicContent,
   REPAIR_ATTEMPTS,
 } from './utils';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('GenerateContentNode');
 
 export const SYSTEM_PROMPT = `Você é um educador sênior do Blueprint, responsável por transformar uma syllabus e resultados de pesquisa em um aprendizado profundo, claro e prático para alunos.
 
@@ -79,11 +82,11 @@ export function buildGenerateContentNode() {
         isModelAllowed,
       );
       summary = summaryRun.value.summary;
-      console.log(
+      logger.log(
         `Summary (${summaryRun.modelId}): ${(Date.now() - start) / 1000}s`,
       );
     } else {
-      console.log('Summary reutilizado da rodada anterior');
+      logger.log('Summary reutilizado da rodada anterior');
     }
 
     // Revisao: mantem o que ja passou na validacao e so gera o que faltou.
@@ -99,7 +102,7 @@ export function buildGenerateContentNode() {
     const invalidAfterBatch = new Set<string>();
 
     if (pending.length) {
-      console.log(
+      logger.log(
         `${pending.length}/${state.topics.length} topicos precisam de conteudo`,
       );
 
@@ -123,7 +126,7 @@ export function buildGenerateContentNode() {
           if (!contentById.has(topic.id)) invalidAfterBatch.add(topic.id);
         }
 
-        console.log(
+        logger.log(
           `Batch ${index + 1}/${batches.length} (${run.modelId}): ${(Date.now() - start) / 1000}s`,
         );
 
@@ -138,7 +141,7 @@ export function buildGenerateContentNode() {
     // Reparo: um topico por vez, com o próximo modelo da cadeia, para nao
     // re-renderizar os lotes que ja vieram corretos.
     if (invalidAfterBatch.size) {
-      console.warn(`Reparando topicos: ${[...invalidAfterBatch].join(', ')}`);
+      logger.warn(`Reparando topicos: ${[...invalidAfterBatch].join(', ')}`);
     }
 
     for (let attempt = 1; attempt <= REPAIR_ATTEMPTS; attempt++) {
@@ -157,11 +160,11 @@ export function buildGenerateContentNode() {
         if (produced && isValidTopicContent(produced.content)) {
           contentById.set(topic.id, produced.content);
           invalidAfterBatch.delete(topic.id);
-          console.log(
+          logger.log(
             `Reparo do topico ${topic.id} ok (${run.modelId}, tentativa ${attempt})`,
           );
         } else {
-          console.warn(
+          logger.warn(
             `Reparo do topico ${topic.id} falhou (${run.modelId}, tentativa ${attempt})`,
           );
         }

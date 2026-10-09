@@ -11,6 +11,9 @@ import {
 } from '../llm.factory';
 import { invokeWithFallback } from '../llm-retry';
 import { evaluationSchema } from '../schemas/evaluationSchema';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('EvaluationNode');
 
 const SYSTEM_PROMPT = `Você é o avaliador pedagógico do Blueprint, responsável por verificar se o material de aprendizado gerado cobre a syllabus e é utilizável por um aluno.
 
@@ -111,7 +114,7 @@ async function evaluate(
     run,
     isModelAllowed,
   );
-  console.log(`Avaliacao (${fallback.modelId}) ok`);
+  logger.log(`Avaliacao (${fallback.modelId}) ok`);
 
   return fallback.value;
 }
@@ -129,7 +132,7 @@ export const buildEvaluationNode = () => {
 
     const result = await evaluate(state);
 
-    console.log('Avaliação concluída com sucesso. Resultados:', result);
+    logger.log('Avaliação concluída com sucesso. Resultados:', result);
 
     config.writer?.({
       step: 'evaluation',

@@ -1,3 +1,7 @@
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('LLM Retry');
+
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
 const RATE_LIMIT_MAX_WAIT_MS = 45_000;
 const RATE_LIMIT_DEFAULT_WAIT_MS = 5_000;
@@ -309,7 +313,7 @@ export async function invokeWithFallback<T>(
         markModelUnavailable(modelId, error);
       }
 
-      console.warn(
+      logger.warn(
         `Modelo ${modelId} falhou: ${getErrorMessage(error).slice(0, 300)}`,
       );
     }

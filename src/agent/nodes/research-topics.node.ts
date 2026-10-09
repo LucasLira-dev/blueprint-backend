@@ -13,6 +13,9 @@ import {
 } from '../llm.factory';
 import { invokeWithFallback } from '../llm-retry';
 import { researchResultSchema } from '../schemas/researchSchema';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('ResearchTopicsNode');
 
 // 120k chars (~30k tokens) era input puro numa chamada que so precisa de JSON.
 // Com pesquisa vazia ou curta a entrada cai junto.
@@ -104,9 +107,9 @@ function extractResearchText(agentResult: unknown): string {
           : (JSON.stringify(content)?.slice(0, 80) ?? typeof content);
       return `#${index} type=${typeof content}: ${preview}`;
     });
-    console.warn('Pesquisa sem texto utilizavel. Mensagens:', summary);
+    logger.warn('Pesquisa sem texto utilizavel. Mensagens:', summary);
   } else {
-    console.warn('Pesquisa sem texto utilizavel: nenhuma mensagem retornada.');
+    logger.warn('Pesquisa sem texto utilizavel: nenhuma mensagem retornada.');
   }
 
   return '';
@@ -149,7 +152,7 @@ export function buildResearchTopicsNode() {
       MAX_RESEARCH_CHARS,
     );
 
-    console.log({
+    logger.log({
       topicCount: state.topics.length,
       researchTextLength: researchText.length,
       researchPreview: researchText.slice(0, 500),
@@ -158,7 +161,7 @@ export function buildResearchTopicsNode() {
     // Sem texto nao vale a pena chamar o formatter: seria uma request inteira
     // para um modelo transformar `[]` em JSON. O conteudo sai da syllabus.
     if (!researchText.trim()) {
-      console.warn('Pesquisa vazia; seguindo apenas com a syllabus.');
+      logger.warn('Pesquisa vazia; seguindo apenas com a syllabus.');
 
       config.writer?.({
         step: 'researchTopics',
@@ -217,12 +220,12 @@ async function runResearchAgent(input: unknown, modelId: string) {
       (id) => run(id),
       isModelAllowed,
     );
-    console.log(`Research agent (${result.modelId}) concluído`);
+    logger.log(`Research agent (${result.modelId}) concluído`);
     return result.value;
   } catch (error) {
     // Fallback do agente ja tentou a lista inteira. Deixa o erro subir para o
     // controller, que decide entre cota (salva parcial) e falha real.
-    console.error('Research agent falhou:', error);
+    logger.error('Research agent falhou:', error);
     throw error;
   }
 }
@@ -246,10 +249,10 @@ async function formatResearch(modelId: string, researchText: string) {
       run,
       isModelAllowed,
     );
-    console.log(`Formatter (${result.modelId}) ok`);
+    logger.log(`Formatter (${result.modelId}) ok`);
     return result.value;
   } catch (error) {
-    console.error('Formatter de pesquisa falhou:', error);
+    logger.error('Formatter de pesquisa falhou:', error);
     throw error;
   }
 }

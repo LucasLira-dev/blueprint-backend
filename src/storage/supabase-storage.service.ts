@@ -58,7 +58,7 @@ export class SupabaseStorageService implements OnModuleInit {
       .remove([filePath]);
 
     if (error) {
-      console.error(`Error deleting PDF: ${error.message}`);
+      this.logger.error(`Error deleting PDF: ${error.message}`);
     }
   }
 }

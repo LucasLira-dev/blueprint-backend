@@ -5,8 +5,6 @@ import {
   ForbiddenException,
   Get,
   Param,
-  ParseBoolPipe,
-  ParseEnumPipe,
   Patch,
   Query,
   Res,
@@ -19,8 +17,11 @@ import { type Response } from 'express';
 import { randomUUID } from 'crypto';
 import { BetterAuthThrottlerGuard } from 'src/common/guards/user-throttler.guard';
 import { Throttle } from '@nestjs/throttler';
-import { Visibility } from 'src/generated/prisma/enums';
 import { isModelAllowed, DEFAULT_MODEL } from 'src/agent/llm.factory';
+import { GenerateStudyPlanDto } from './dto/generate-study-plan.dto';
+import { GetPlansQueryDto } from './dto/get-plans-query.dto';
+import { ChangeVisibilityDto } from './dto/change-visibility.dto';
+import { ChangeFavoriteDto } from './dto/change-favorite.dto';
 
 @Controller('study-plans')
 export class StudyPlansController {
@@ -33,8 +34,7 @@ export class StudyPlansController {
   @Throttle({ default: { limit: 5, ttl: 60 * 60 * 1000 } })
   @Get('generate')
   async generate(
-    @Query('model') model: string,
-    @Query('topic') topic: string,
+    @Query() query: GenerateStudyPlanDto,
     @Session() session: UserSession,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -45,7 +45,7 @@ export class StudyPlansController {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const modelId = model ?? DEFAULT_MODEL;
+    const modelId = query.model ?? DEFAULT_MODEL;
 
     if (!isModelAllowed(modelId)) {
       res.write(
@@ -61,7 +61,7 @@ export class StudyPlansController {
 
     try {
       for await (const event of this.agentService.streamGeneration(
-        topic,
+        query.topic,
         userId,
         threadId,
         modelId,
@@ -101,9 +101,10 @@ export class StudyPlansController {
 
   @Get('plans')
   async getPlans(
-    @Query('userId') userId: string,
+    @Query() query: GetPlansQueryDto,
     @Session() session: UserSession,
   ) {
+    const { userId } = query;
     if (userId && userId !== session.user.id) {
       if (session.user.role !== 'admin') {
         throw new ForbiddenException(
@@ -133,12 +134,12 @@ export class StudyPlansController {
   @Patch('plans/:id/visibility')
   async changeVisibility(
     @Param('id') id: string,
-    @Query('visibility', new ParseEnumPipe(Visibility)) visibility: Visibility,
+    @Query() query: ChangeVisibilityDto,
     @Session() session: UserSession,
   ) {
     return this.studyPlansService.changeVisibility(
       id,
-      visibility,
+      query.visibility,
       session.user.id,
     );
   }
@@ -146,10 +147,14 @@ export class StudyPlansController {
   @Patch('plans/:id/favorite')
   async changeFavorite(
     @Param('id') id: string,
-    @Body('favorite', ParseBoolPipe) favorite: boolean,
+    @Body() body: ChangeFavoriteDto,
     @Session() session: UserSession,
   ) {
-    return this.studyPlansService.changeFavorite(id, favorite, session.user.id);
+    return this.studyPlansService.changeFavorite(
+      id,
+      body.favorite,
+      session.user.id,
+    );
   }
 
   @Delete('plans/:id/removeFavorite')

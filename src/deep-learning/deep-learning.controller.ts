@@ -16,6 +16,10 @@ import { type Response } from 'express';
 import { DEFAULT_MODEL, isModelAllowed } from 'src/agent/llm.factory';
 import { AgentService } from 'src/agent/agent.service';
 import { StudyPlansService } from 'src/study-plans/study-plans.service';
+import { Logger } from '@nestjs/common';
+import { GenerateDeepLearningDto } from './dto/generate-deep-learning.dto';
+
+const logger = new Logger('DeepLearningController');
 
 @Controller('deep-learning')
 export class DeepLearningController {
@@ -30,7 +34,7 @@ export class DeepLearningController {
   @Get(':id/generate')
   async generate(
     @Param('id') id: string,
-    @Query('model') model: string,
+    @Query() query: GenerateDeepLearningDto,
     @Session() session: UserSession,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -43,7 +47,7 @@ export class DeepLearningController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const modelId = model ?? DEFAULT_MODEL;
+    const modelId = query.model ?? DEFAULT_MODEL;
 
     if (!isModelAllowed(modelId)) {
       res.write(
@@ -78,7 +82,7 @@ export class DeepLearningController {
 
       const finalState = await this.agentService.getDeepFinalState(threadId);
 
-      console.log('Final state of deep learning generation:', finalState);
+      logger.log('Final state of deep learning generation:', finalState);
 
       const saved =
         await this.deepLearningService.persistFinalDeepLearningState(
@@ -91,7 +95,7 @@ export class DeepLearningController {
         `data: ${JSON.stringify({ step: 'done', status: 'done', label: 'Concluido', deepLearningContentId: saved.id, studyPlanId: saved.studyPlanId })}\n\n`,
       );
     } catch (error: any) {
-      console.error('Erro ao gerar o plano de aprendizado:', error);
+      logger.error('Erro ao gerar o plano de aprendizado:', error);
       res.write(
         `data: ${JSON.stringify({
           step: 'error',

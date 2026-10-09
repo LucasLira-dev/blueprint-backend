@@ -8,6 +8,9 @@ import {
 } from '../llm.factory';
 import { invokeWithFallback, isQuotaError } from '../llm-retry';
 import { quizSchema } from '../schemas/quizSchema';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('GenerateQuizNode');
 
 const SYSTEM_PROMPT = `Você é o avaliador do Blueprint, especialista em criar questões de múltipla escolha que verificam se o aluno realmente entendeu o conteúdo.
 
@@ -110,7 +113,7 @@ export const buildGenerateQuizNode = () => {
       );
 
       const questions = run.value.questions ?? [];
-      console.log(`Quiz gerado (${run.modelId}): ${questions.length} questões`);
+      logger.log(`Quiz gerado (${run.modelId}): ${questions.length} questões`);
 
       config.writer?.({
         step: 'generateQuiz',
@@ -125,10 +128,7 @@ export const buildGenerateQuizNode = () => {
       // O conteudo ja esta validado. Se so a cota do quiz estourou, entregar a
       // trilha sem quiz vale mais do que descartar tudo na ultima etapa.
       if (isQuotaError(error)) {
-        console.warn(
-          'Cota esgotada antes do quiz; entregando sem quiz:',
-          error,
-        );
+        logger.warn('Cota esgotada antes do quiz; entregando sem quiz:', error);
 
         config.writer?.({
           step: 'generateQuiz',
